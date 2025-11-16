@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.db import models
 from django.utils import timezone
+import uuid
 
 
 class UserManager(BaseUserManager):
@@ -74,3 +75,40 @@ class User(AbstractBaseUser, PermissionsMixin):
     def get_short_name(self):
         """Return the short name for the user."""
         return self.name.split()[0] if self.name else self.email
+
+
+class ShippingAddress(models.Model):
+    """Endereço de entrega do usuário (entidade fraca)"""
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='shipping_addresses',
+        verbose_name='usuário'
+    )
+    street = models.CharField('rua', max_length=255)
+    city = models.CharField('cidade', max_length=100)
+    state = models.CharField('estado', max_length=100)
+    zip_code = models.CharField('CEP', max_length=20)
+    country = models.CharField('país', max_length=100, default='Brasil')
+    complement = models.CharField('complemento', max_length=255, blank=True)
+    number = models.CharField('número', max_length=20, blank=True)
+    is_default = models.BooleanField('endereço padrão', default=False)
+    created_at = models.DateTimeField('criado em', auto_now_add=True)
+    updated_at = models.DateTimeField('atualizado em', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'endereço de entrega'
+        verbose_name_plural = 'endereços de entrega'
+        ordering = ['-is_default', '-created_at']
+    
+    def __str__(self):
+        return f"{self.street}, {self.number} - {self.city}/{self.state}"
+    
+    def save(self, *args, **kwargs):
+        """Garante que apenas um endereço seja padrão por usuário"""
+        if self.is_default:
+            # Remove o padrão de outros endereços do mesmo usuário
+            ShippingAddress.objects.filter(user=self.user, is_default=True).update(is_default=False)
+        super().save(*args, **kwargs)

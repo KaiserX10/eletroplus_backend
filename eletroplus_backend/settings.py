@@ -43,13 +43,17 @@ INSTALLED_APPS = [
     'corsheaders',
     'storages',
     'drf_spectacular',
+    'django_filters',
     
     # Local apps
     'users',
     'catalog',
+    'cart',
     'orders',
     'payment',
     'reviews',
+    'contact',
+    'banner',
 ]
 
 MIDDLEWARE = [
