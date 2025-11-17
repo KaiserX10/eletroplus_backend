@@ -244,3 +244,37 @@ class CouponValidateSerializer(serializers.Serializer):
                 pass
         
         return data
+
+
+class CouponUpdateSerializer(serializers.ModelSerializer):
+    """Serializer para atualizar cupom"""
+    
+    class Meta:
+        model = Coupon
+        fields = [
+            'code', 'discount_value', 'discount_percentage',
+            'max_uses', 'valid_until', 'active'
+        ]
+    
+    def validate(self, data):
+        """Valida que apenas um tipo de desconto seja fornecido"""
+        discount_value = data.get('discount_value', self.instance.discount_value if self.instance else 0)
+        discount_percentage = data.get('discount_percentage', self.instance.discount_percentage if self.instance else 0)
+        
+        if discount_value > 0 and discount_percentage > 0:
+            raise serializers.ValidationError(
+                "Forneça apenas um tipo de desconto: valor fixo OU porcentagem."
+            )
+        
+        if discount_value == 0 and discount_percentage == 0:
+            raise serializers.ValidationError(
+                "Forneça pelo menos um tipo de desconto: valor fixo OU porcentagem."
+            )
+        
+        return data
+    
+    def validate_code(self, value):
+        """Valida formato do código"""
+        if len(value) < 3:
+            raise serializers.ValidationError("O código deve ter pelo menos 3 caracteres.")
+        return value.upper()

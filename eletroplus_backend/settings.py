@@ -249,6 +249,12 @@ SPECTACULAR_SETTINGS = {
         'displayOperationId': True,
     },
     'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/',
+    # Adicione estas configurações para evitar erros
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+    'SERVE_AUTHENTICATION': None,
+    'SCHEMA_PATH_PREFIX_TRIM': True,
+    'DEFAULT_GENERATOR_CLASS': 'drf_spectacular.generators.SchemaGenerator',
 }
 
 # Email Configuration (for order confirmations, password resets, etc.)
