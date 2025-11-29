@@ -44,6 +44,18 @@ class UserViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['get'])
+    def payment_methods(self, request):
+        """Stub: Retorna array vazio para formas de pagamento salvas"""
+        # TODO: Implementar modelo PaymentMethod quando necessário
+        return Response([], status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'])
+    def payment_methods(self, request):
+        """Stub: Retorna array vazio para formas de pagamento salvas"""
+        # TODO: Implementar modelo PaymentMethod quando necessário
+        return Response([], status=status.HTTP_200_OK)
 
 
 @extend_schema(
@@ -99,6 +111,7 @@ class ShippingAddressViewSet(viewsets.ModelViewSet):
     """ViewSet para Endereços de Entrega"""
     serializer_class = ShippingAddressSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None  # Desabilita paginação - usuários normalmente têm poucos endereços
     
     def get_queryset(self):
         """Retorna apenas endereços do usuário autenticado"""
@@ -112,6 +125,10 @@ class ShippingAddressViewSet(viewsets.ModelViewSet):
     def set_default(self, request, pk=None):
         """Define endereço como padrão"""
         address = self.get_object()
+        
+        # Garante que apenas um endereço seja padrão
+        ShippingAddress.objects.filter(user=request.user, is_default=True).update(is_default=False)
+        
         address.is_default = True
         address.save()
         

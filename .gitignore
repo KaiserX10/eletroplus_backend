@@ -22,6 +22,11 @@ db.sqlite3-journal
 /media
 /staticfiles
 
+# Data files (application-generated static files)
+# Mantém a estrutura mas ignora os arquivos de imagem
+../data/images/*
+!../data/images/.gitkeep
+
 # IDE
 .vscode/
 .idea/

@@ -20,6 +20,7 @@ urlpatterns = [
     
     # Rotas do UserViewSet (manuais para evitar conflito)
     path('users/me/', UserViewSet.as_view({'get': 'me', 'put': 'me', 'patch': 'me'}), name='user-me'),
+    path('users/payment-methods/', UserViewSet.as_view({'get': 'payment_methods'}), name='user-payment-methods'),
     
     # Inclui rotas do router (shipping-addresses)
     path('', include(router.urls)),
