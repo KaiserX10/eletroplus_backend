@@ -12,9 +12,9 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'email', 'name', 'phone',
             'street', 'city', 'state', 'zip_code', 'country',
-            'birth_date', 'cpf', 'date_joined'
+            'birth_date', 'cpf', 'date_joined', 'is_staff'
         ]
-        read_only_fields = ['id', 'date_joined']
+        read_only_fields = ['id', 'date_joined', 'is_staff']
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -118,6 +118,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Adiciona informações customizadas ao token
         token['email'] = user.email
         token['name'] = user.name
+        token['is_staff'] = user.is_staff  # Adiciona is_staff ao token
         
         return token
 
@@ -129,6 +130,6 @@ class ShippingAddressSerializer(serializers.ModelSerializer):
         model = ShippingAddress
         fields = [
             'id', 'street', 'city', 'state', 'zip_code', 'country',
-            'complement', 'number', 'is_default', 'created_at', 'updated_at'
+            'complement', 'number', 'neighborhood', 'is_default', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

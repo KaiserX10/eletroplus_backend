@@ -1,9 +1,10 @@
 from django.shortcuts import render
 from rest_framework import viewsets, filters, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser
 from django_filters.rest_framework import DjangoFilterBackend
+from django.conf import settings
 from .models import Category, Product, ProductSpecification
 from .serializers import (
     CategorySerializer,
@@ -11,8 +12,10 @@ from .serializers import (
     ProductListSerializer,
     ProductDetailSerializer,
     ProductCreateUpdateSerializer,
-    ProductSpecificationSerializer
+    ProductSpecificationSerializer,
+    ImageUploadSerializer
 )
+from .utils import save_uploaded_image, validate_image_file, MAX_IMAGES_PER_UPLOAD
 
 
 # Create your views here.
@@ -33,6 +36,12 @@ class CategoryViewSet(viewsets.ModelViewSet):
         if self.action == 'retrieve':
             return CategoryDetailSerializer
         return CategorySerializer
+    
+    def get_permissions(self):
+        """Permissões específicas por ação - apenas staff/admin podem criar/editar/excluir"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminUser()]
+        return [IsAuthenticatedOrReadOnly()]
     
     @action(detail=True, methods=['get'])
     def products(self, request, slug=None):
@@ -81,6 +90,12 @@ class ProductViewSet(viewsets.ModelViewSet):
                 return ProductDetailSerializer
             return ProductListSerializer
         return ProductCreateUpdateSerializer
+    
+    def get_serializer_context(self):
+        """Adiciona request ao contexto do serializer"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
     
     def get_permissions(self):
         """Permissões específicas por ação"""
@@ -136,3 +151,94 @@ class ProductViewSet(viewsets.ModelViewSet):
                 serializer.save(product=product)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def upload_images(request):
+    """
+    Upload de múltiplas imagens para produtos
+    
+    Permite enviar até 10 imagens por vez, cada uma com máximo de 5MB.
+    Formatos suportados: JPG, JPEG, PNG, GIF, WEBP
+    
+    Retorna uma lista com os caminhos das imagens salvas no formato:
+    ['/data/images/product_abc123_0.jpg', '/data/images/product_def456_1.png', ...]
+    
+    As imagens são salvas no diretório data/images/ e podem ser acessadas via URL:
+    http://localhost:8000/data/images/product_abc123_0.jpg
+    """
+    if 'images' not in request.FILES:
+        return Response(
+            {'error': 'Nenhuma imagem enviada. Use o campo "images" com uma lista de arquivos.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    images = request.FILES.getlist('images')
+    
+    # Validar número de imagens
+    if len(images) > MAX_IMAGES_PER_UPLOAD:
+        return Response(
+            {'error': f'Máximo de {MAX_IMAGES_PER_UPLOAD} imagens por upload'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if len(images) == 0:
+        return Response(
+            {'error': 'Nenhuma imagem válida encontrada'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    saved_images = []
+    errors = []
+    
+    for index, image in enumerate(images):
+        try:
+            # Validar e salvar imagem
+            image_path = save_uploaded_image(image, prefix='product')
+            
+            # Construir URL completa
+            base_url = request.build_absolute_uri('/').rstrip('/')
+            if base_url.endswith('/api'):
+                base_url = base_url[:-4]
+            
+            image_url = f"{base_url}{image_path}"
+            
+            saved_images.append({
+                'path': image_path,
+                'url': image_url,
+                'index': index,
+                'filename': image.name,
+                'size': image.size
+            })
+        except Exception as e:
+            errors.append({
+                'filename': image.name,
+                'error': str(e)
+            })
+    
+    if saved_images:
+        # Construir resposta
+        response_data = {
+            'success': True,
+            'uploaded': len(saved_images),
+            'images': saved_images,
+            'paths': [img['path'] for img in saved_images],  # Para compatibilidade
+            'urls': [img['url'] for img in saved_images]  # Para compatibilidade
+        }
+        
+        if errors:
+            response_data['errors'] = errors
+            response_data['warning'] = f'{len(errors)} imagem(ns) falharam no upload'
+        
+        status_code = status.HTTP_200_OK if not errors else status.HTTP_207_MULTI_STATUS
+        return Response(response_data, status=status_code)
+    else:
+        return Response(
+            {
+                'success': False,
+                'error': 'Nenhuma imagem foi salva',
+                'errors': errors
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )

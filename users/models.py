@@ -94,6 +94,7 @@ class ShippingAddress(models.Model):
     country = models.CharField('país', max_length=100, default='Brasil')
     complement = models.CharField('complemento', max_length=255, blank=True)
     number = models.CharField('número', max_length=20, blank=True)
+    neighborhood = models.CharField('bairro', max_length=100, blank=True)
     is_default = models.BooleanField('endereço padrão', default=False)
     created_at = models.DateTimeField('criado em', auto_now_add=True)
     updated_at = models.DateTimeField('atualizado em', auto_now=True)
@@ -104,7 +105,7 @@ class ShippingAddress(models.Model):
         ordering = ['-is_default', '-created_at']
     
     def __str__(self):
-        return f"{self.street}, {self.number} - {self.city}/{self.state}"
+        return f"{self.street}, {self.number or ''} - {self.neighborhood or ''} - {self.city}/{self.state}"
     
     def save(self, *args, **kwargs):
         """Garante que apenas um endereço seja padrão por usuário"""

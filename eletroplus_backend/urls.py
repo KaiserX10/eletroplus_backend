@@ -32,3 +32,5 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    # Serve data files (application-generated static files)
+    urlpatterns += static(settings.DATA_URL, document_root=settings.DATA_ROOT)
